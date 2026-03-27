@@ -1,4 +1,4 @@
-module github.com/CaiJimmy/hugo-theme-stack/demo
+module github.com/xiasiqi2014-commits/hugo-theme-stack/site
 
 go 1.25.6
 

@@ -60,7 +60,7 @@ main() {
 
   # Build the site
   echo "Building the site..."
-  cd demo
+  cd site
   hugo --gc --minify --themesDir=/opt/buildhome --theme=repo
 }
 

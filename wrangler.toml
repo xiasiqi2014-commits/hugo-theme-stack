@@ -5,5 +5,5 @@ compatibility_date = "2026-01-25"
     command = "chmod a+x ./.ci/build.sh && ./.ci/build.sh"
 
 [assets]
-    directory          = "demo/public"
+    directory          = "site/public"
     not_found_handling = "404-page"
