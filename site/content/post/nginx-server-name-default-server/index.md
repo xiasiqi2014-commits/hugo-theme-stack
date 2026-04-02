@@ -48,17 +48,45 @@ server {
 
 ## 深度解析：Nginx 的"退而求其次"法则
 
-当 Nginx 接收到一个 HTTP/HTTPS 请求时，它的匹配逻辑并不是非黑即白的"要么匹配，要么拒绝"，而是分成了几个优先级：
+当 Nginx 接收到一个 HTTP/HTTPS 请求时，它的匹配逻辑并不是非黑即白的"要么匹配，要么拒绝"，而是一套完整的优先级瀑布流。先看全貌，再逐级拆解：
+
+```mermaid
+flowchart TD
+    A["🌐 请求到达 Nginx"] --> B{"匹配监听端口<br/>listen 443 / 80"}
+    B -->|"未找到匹配端口"| C["❌ 连接拒绝"]
+    B -->|"找到匹配端口"| D{"精确匹配 server_name<br/>如 a.example.com"}
+    D -->|"✅ 匹配成功"| E["🎯 使用该 server 块处理请求"]
+    D -->|"未匹配"| F{"前缀通配符匹配<br/>如 *.example.com"}
+    F -->|"✅ 匹配成功"| E
+    F -->|"未匹配"| G{"后缀通配符匹配<br/>如 mail.*"}
+    G -->|"✅ 匹配成功"| E
+    G -->|"未匹配"| H{"正则表达式匹配<br/>如 ~^www\\.(.+)\\.com$"}
+    H -->|"✅ 匹配成功"| E
+    H -->|"未匹配"| I{"是否有显式声明<br/>default_server?"}
+    I -->|"有"| J["🏠 使用 default_server 块"]
+    I -->|"没有"| K["📄 使用第一个加载的<br/>server 块 - 隐式默认"]
+```
+
+具体来说，每一级的匹配规则如下：
 
 ### 1. 匹配端口（优先级最高）
 
 请求到达时，Nginx 首先看的是**端口**。在上面的案例中，浏览器访问 `https://c.example.com`，请求准确无误地到达了服务器的 `443` 端口。
 
-### 2. 匹配 server_name（精确/通配符/正则）
+### 2. 匹配 server_name（四级优先级瀑布）
 
-确认端口后，Nginx 会提取请求头中的 `Host` 字段（即 `c.example.com`），去所有监听了 443 端口的 `server` 块中寻找匹配的 `server_name`。
+确认端口后，Nginx 会提取请求头中的 `Host` 字段（即 `c.example.com`），去所有监听了 443 端口的 `server` 块中，按以下**严格优先级**逐级尝试匹配 `server_name`：
 
-在这个阶段，Nginx 确实**没找到**。
+| 优先级 | 匹配类型 | 示例 | 说明 |
+|:---:|------|------|------|
+| 1 | **精确匹配** | `server_name a.example.com;` | 完全一致，优先级最高 |
+| 2 | **前缀通配符** | `server_name *.example.com;` | 以 `*.` 开头的通配 |
+| 3 | **后缀通配符** | `server_name mail.*;` | 以 `.*` 结尾的通配 |
+| 4 | **正则表达式** | `server_name ~^www\.(.+)\.com$;` | 以 `~` 开头的正则 |
+
+> ⚡ 注意：如果同一优先级有多个匹配，Nginx 使用**最长匹配**原则（通配符）或**配置文件中出现顺序**（正则）。
+
+在我们的案例中，`c.example.com` 在这四级中都**没有找到**匹配。
 
 ### 3. 终极绝招：寻找默认服务器（default_server）
 
@@ -73,6 +101,10 @@ server {
 2. Nginx 退而求其次，把请求塞给了 443 端口的**默认服务器**（即我们配置了 a 和 b 的那个唯一的 server 块）。
 3. 恰好，这个块里配置的是 `*.example.com` 通配符证书，完美覆盖了 `c.example.com` 的域名校验，浏览器不报警。
 4. 请求顺理成章地被 `proxy_pass` 转发到了后端。
+
+> 💡 **补充：SNI 与 TLS 握手的关系**
+>
+> 你可能会问：TLS 握手不是发生在 HTTP 请求之前吗？Nginx 怎么在握手阶段就知道域名？答案是 **SNI（Server Name Indication）**。现代浏览器在 TLS ClientHello 阶段就会携带目标域名，Nginx 据此选择对应的证书和 server 块。如果客户端不支持 SNI（极其罕见），Nginx 会直接使用默认 server 块的证书进行握手。
 
 ## 进阶思考：这是特性还是 Bug？
 
@@ -90,14 +122,19 @@ server {
 
 ```nginx
 # 专门处理无家可归请求的兜底 server
+# ⚠️ 建议文件名以 00_ 开头，确保在字母序中最先加载
 server {
     listen 80 default_server;
     listen 443 ssl default_server;
     server_name _; # _ 是一个无效域名的占位符
     
-    # 随便配一个自己签发的证书应付 443 握手
-    ssl_certificate /path/to/dummy.crt; 
-    ssl_certificate_key /path/to/dummy.key;
+    # ⚠️ 即使是兜底块，HTTPS 端口也必须配置证书，否则 Nginx 无法启动
+    # 可以用 openssl 快速生成自签名证书：
+    # openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+    #   -keyout /etc/nginx/ssl/dummy.key -out /etc/nginx/ssl/dummy.crt \
+    #   -subj "/CN=dummy"
+    ssl_certificate /etc/nginx/ssl/dummy.crt; 
+    ssl_certificate_key /etc/nginx/ssl/dummy.key;
     
     # 444 是 Nginx 特有状态码：直接断开连接，不返回任何数据
     return 444; 
@@ -110,6 +147,8 @@ server {
     # ... 正常业务配置
 }
 ```
+
+> ⚠️ **关键提醒**：每个端口只能有**一个** `default_server`。如果你不小心在多个 server 块中声明了 `listen 443 ssl default_server;`，Nginx 会发出 `warn` 级别日志，并以最后加载的那个为准——又回到了依赖加载顺序的老问题。
 
 ## 总结
 
@@ -159,6 +198,20 @@ server {
 - 浏览器一看，`c.example.com` 匹配通配符，绿锁放行！
 - 请求被默默转发到了 **`backend_A`**。
 
+```mermaid
+flowchart LR
+    subgraph before ["✅ 改名前：api_server.conf 先加载"]
+        direction LR
+        C1["c.example.com"] -->|"server_name 未匹配"| N1["Nginx"]
+        N1 -->|"隐式默认 → api_server.conf"| A1["backend_A"]
+    end
+    subgraph after ["💀 改名后：web_server.conf 先加载"]
+        direction LR
+        C2["c.example.com"] -->|"server_name 未匹配"| N2["Nginx"]
+        N2 -->|"隐式默认 → web_server.conf"| B2["backend_B"]
+    end
+```
+
 ### 真正的恐怖故事："薛定谔的路由"
 
 你可能觉得："哦，大不了就是转到第一个配置里嘛，我知道是哪一个就行了。"
@@ -174,7 +227,7 @@ http {
 }
 ```
 
-Nginx 加载这些配置文件的顺序，通常是**按照文件名的字母/数字顺序**来的！
+Nginx 加载这些配置文件的顺序，通常是**按照文件名的字母/数字顺序**来的！（严格来说，`include` 通配符的展开依赖操作系统的 `glob()` 系统调用。在 Linux 上，`glob()` 返回的结果是按字典序排列的；但在某些嵌入式系统或特殊文件系统中，排序行为可能不同。好在绝大多数生产环境都是 Linux，可以依赖字典序。）
 
 设想一下这个致命场景：
 
