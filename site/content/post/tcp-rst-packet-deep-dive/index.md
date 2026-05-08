@@ -7,7 +7,7 @@ tags:
     - Linux
     - 运维
 categories:
-    - 技术
+    - 网络协议
 ---
 
 > **核心结论（TL;DR）：**

@@ -6,7 +6,7 @@ tags:
     - Nginx
     - 运维
 categories:
-    - 技术
+    - Web服务器
 ---
 
 如果你问一个刚配置过几次 Nginx 的开发者："如果 HTTP 请求的域名在 Nginx 配置的 `server_name` 里找不到，会发生什么？"

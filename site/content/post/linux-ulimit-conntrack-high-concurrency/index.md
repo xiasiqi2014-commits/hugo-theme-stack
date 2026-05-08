@@ -7,7 +7,7 @@ tags:
     - 运维
     - 高并发
 categories:
-    - 技术
+    - Linux系统
 ---
 
 > **核心结论（TL;DR）：**
