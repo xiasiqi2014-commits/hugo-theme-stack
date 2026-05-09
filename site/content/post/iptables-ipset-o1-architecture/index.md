@@ -91,6 +91,39 @@ ipset add vpn_acls 10.8.0.20,192.168.99.0/24   # 李四的权限
 iptables -A FORWARD -m set --match-set vpn_acls src,dst -j ACCEPT
 ```
 
+### 进阶：加入端口维度，实现"谁能访问哪个网段的哪个端口"
+
+上面的 `hash:ip,net` 只控制到了网段级别。但实际场景中，你往往需要更精细的粒度——比如只允许 DBA 访问数据库的 3306 端口，而不是整个网段的所有端口。
+
+`ipset` 支持三维哈希 `hash:ip,port,net`，轻松搞定：
+
+```bash
+# 1. 创建三维哈希表：强绑定 [源IP + 协议:端口 + 目标网段]
+ipset create vpn_acls hash:ip,port,net
+
+# 2. DBA 张三：只能访问测试网段的 MySQL(3306)
+ipset add vpn_acls 10.8.0.10,tcp:3306,192.168.10.0/24
+
+# 3. 前端李四：只能访问生产网段的 HTTP(80) 和 HTTPS(443)
+ipset add vpn_acls 10.8.0.20,tcp:80,192.168.99.0/24
+ipset add vpn_acls 10.8.0.20,tcp:443,192.168.99.0/24
+
+# 4. iptables 依然只需要一条规则（注意 match flag 变成了三个维度）
+iptables -A FORWARD -m set --match-set vpn_acls src,dst,dst -j ACCEPT
+```
+
+这比堆几千条 `iptables -A FORWARD -s x.x.x.x -d x.x.x.x -p tcp --dport 3306 -j ACCEPT` 优雅了不止一个量级。
+
+以下是 ipset 常用的哈希类型速查表：
+
+| 类型 | 维度 | 典型场景 |
+|------|------|---------|
+| `hash:ip` | IP | 黑白名单、封禁恶意 IP |
+| `hash:ip,net` | IP + 网段 | VPN 网段级放行 |
+| `hash:ip,port,net` | IP + 端口 + 网段 | VPN 端口级精细控制（推荐） |
+| `hash:net,port` | 网段 + 端口 | 按服务暴露特定端口 |
+| `hash:ip,port,ip` | 源IP + 端口 + 目标IP | 点对点精确控制 |
+
 ### 如何彻底解决"动态域名/CNAME"引发的雪崩？
 
 配合 `ipset`，我们把"DNS 解析"这个危险动作，从防火墙的核心脚本里**剥离出来**。
