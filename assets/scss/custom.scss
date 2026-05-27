@@ -1,1 +1,208 @@
-/* Place your custom SCSS in HUGO_SITE_FOLDER/assets/scss/custom.scss */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap');
+
+:root {
+    /* Fonts */
+    --sys-font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --base-font-family: 'Inter', var(--sys-font-family);
+    --article-font-family: var(--base-font-family);
+    --heading-font-family: 'Merriweather', Georgia, serif;
+
+    /* Light Mode: Warm Coffee & Sand */
+    --body-background: #f7f5f0;
+    --accent-color: #8c6239;
+    --accent-color-darker: #6f4e2c;
+    --accent-color-text: #ffffff;
+    --body-text-color: #4a4945;
+    
+    --card-background: #ffffff;
+    --card-background-selected: #f0ede6;
+    --card-border-radius: 14px;
+    --card-text-color-main: #232220;
+    --card-text-color-secondary: #6e6c67;
+    --card-text-color-tertiary: #a09e98;
+    --card-separator-color: rgba(140, 98, 57, 0.08);
+
+    --shadow-l1: 0px 4px 20px rgba(140, 98, 57, 0.03), 0px 0px 2px rgba(140, 98, 57, 0.05);
+    --shadow-l2: 0px 10px 30px rgba(140, 98, 57, 0.05), 0px 1px 4px rgba(140, 98, 57, 0.03);
+
+    --blockquote-background-color: #fcfbfa;
+    --code-background-color: rgba(140, 98, 57, 0.06);
+    --code-text-color: #8c6239;
+}
+
+:root[data-scheme="dark"] {
+    /* Dark Mode: Warm Charcoal & Antique Gold */
+    --body-background: #181717;
+    --accent-color: #d4af37;
+    --accent-color-darker: #b38f2e;
+    --accent-color-text: #181717;
+    --body-text-color: #bbb8b2;
+    
+    --card-background: #222121;
+    --card-background-selected: #2d2b2b;
+    --card-border-radius: 14px;
+    --card-text-color-main: #eae5d9;
+    --card-text-color-secondary: #b8b4ab;
+    --card-text-color-tertiary: #7d7a73;
+    --card-separator-color: rgba(234, 229, 217, 0.06);
+
+    --shadow-l1: 0px 4px 24px rgba(0, 0, 0, 0.25), 0px 0px 2px rgba(255, 255, 255, 0.03);
+    --shadow-l2: 0px 10px 40px rgba(0, 0, 0, 0.35), 0px 1px 6px rgba(255, 255, 255, 0.04);
+
+    --blockquote-background-color: #2b2929;
+    --code-background-color: #2b2929;
+    --code-text-color: #eae5d9;
+    --tr-even-background-color: #2a2929;
+    --table-border-color: #3e3c3c;
+}
+
+/* Typography Overrides */
+h1, h2, h3, h4, h5, h6, 
+.article-title, 
+.widget-title,
+.sidebar .site-name {
+    font-family: var(--heading-font-family) !important;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* Base Body Font */
+body {
+    font-family: var(--base-font-family);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Cards & Widgets Hover Lift Micro-animation */
+.article-card, .widget, .card {
+    transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                box-shadow 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+                border-color 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    border: 1px solid rgba(140, 98, 57, 0.04);
+    
+    [data-scheme="dark"] & {
+        border-color: rgba(234, 229, 217, 0.04);
+    }
+
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08) !important;
+        border-color: rgba(140, 98, 57, 0.15);
+        
+        [data-scheme="dark"] & {
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45), 0 0 15px rgba(212, 175, 55, 0.03) !important;
+            border-color: rgba(212, 175, 55, 0.15);
+        }
+    }
+}
+
+/* Articles and widgets specific refinements */
+.article-image img {
+    border-radius: 12px 12px 0 0;
+    filter: sepia(0.1);
+    transition: filter 0.3s ease;
+    
+    &:hover {
+        filter: sepia(0);
+    }
+}
+
+/* Category Tags */
+.article-tags a {
+    background-color: rgba(140, 98, 57, 0.06) !important;
+    color: var(--accent-color) !important;
+    border: 1px solid rgba(140, 98, 57, 0.1);
+    transition: background-color 0.2s, border-color 0.2s;
+
+    &:hover {
+        background-color: var(--accent-color) !important;
+        color: var(--accent-color-text) !important;
+    }
+
+    [data-scheme="dark"] & {
+        background-color: rgba(212, 175, 55, 0.06) !important;
+        border-color: rgba(212, 175, 55, 0.1);
+
+        &:hover {
+            background-color: var(--accent-color) !important;
+            color: var(--accent-color-text) !important;
+        }
+    }
+}
+
+/* Sidebar Menu Tweaks */
+#main-menu li {
+    border-radius: 8px;
+    margin: 2px 0;
+    transition: background-color 0.25s ease, transform 0.25s ease;
+    
+    a {
+        padding: 8px 16px;
+        width: 100%;
+        border-radius: 8px;
+        transition: color 0.25s ease, padding-left 0.25s ease;
+    }
+
+    &:hover {
+        background-color: rgba(140, 98, 57, 0.06);
+        
+        a {
+            color: var(--accent-color) !important;
+            padding-left: 20px;
+        }
+        
+        [data-scheme="dark"] & {
+            background-color: rgba(212, 175, 55, 0.06);
+        }
+    }
+
+    &.current {
+        background-color: rgba(140, 98, 57, 0.08) !important;
+        
+        a {
+            color: var(--accent-color) !important;
+            font-weight: bold;
+        }
+
+        [data-scheme="dark"] & {
+            background-color: rgba(212, 175, 55, 0.08) !important;
+        }
+    }
+}
+
+/* Article links */
+.article-content a {
+    color: var(--accent-color);
+    text-decoration: none;
+    border-bottom: 1px dashed var(--accent-color);
+    transition: border-bottom-style 0.2s;
+
+    &:hover {
+        border-bottom-style: solid;
+    }
+}
+
+/* Scrollbar customized to fit dark warm coffee theme */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: var(--body-background);
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(140, 98, 57, 0.2);
+    border-radius: 4px;
+    
+    &:hover {
+        background: rgba(140, 98, 57, 0.4);
+    }
+}
+:root[data-scheme="dark"] {
+    ::-webkit-scrollbar-thumb {
+        background: rgba(212, 175, 55, 0.15);
+        
+        &:hover {
+            background: rgba(212, 175, 55, 0.3);
+        }
+    }
+}
