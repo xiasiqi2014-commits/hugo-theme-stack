@@ -1,0 +1,95 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { getRelativeLocaleUrl } from "astro:i18n";
+import { getPostUrl } from "@/utils/getPostPaths";
+import { slugifyStr } from "@/utils/slugify";
+import { toTransitionName } from "@/utils/toTransitionName";
+import Datetime from "./Datetime.astro";
+import config from "@/config";
+
+type Props = {
+  variant?: "h2" | "h3";
+} & CollectionEntry<"posts">;
+
+const { variant: Heading = "h2", id, data, filePath, body } = Astro.props;
+
+const { title, description, tags = [], categories = [], featured, ...props } = data;
+const locale = Astro.currentLocale ?? config.site.lang;
+const postUrl = getPostUrl(id, filePath, locale);
+const category = categories[0] ?? tags[0] ?? "技术笔记";
+const charCount = body ? body.replace(/\s+/g, "").length : 0;
+const readingMinutes = Math.max(1, Math.round(charCount / 400));
+---
+
+<li
+  class="post-card-item list-none"
+  data-category={category}
+>
+  <article
+    class="group border-border bg-surface hover:border-accent/50 relative flex flex-col justify-between rounded-2xl border p-5 shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-6"
+  >
+    <div>
+      <!-- Top Metadata Row -->
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div class="flex items-center gap-2">
+          <span
+            class="bg-accent/10 text-accent rounded-md px-2.5 py-0.5 font-medium"
+          >
+            {category}
+          </span>
+          {
+            featured && (
+              <span class="rounded-md bg-amber-500/15 px-2 py-0.5 font-medium text-amber-600 dark:text-amber-400">
+                ★ 精选
+              </span>
+            )
+          }
+        </div>
+        <div class="text-muted-foreground flex items-center gap-3 font-mono text-xs">
+          <Datetime {...props} size="sm" />
+          {charCount > 0 && <span>· 约 {readingMinutes} 分钟阅读</span>}
+        </div>
+      </div>
+
+      <!-- Title -->
+      <a href={postUrl} class="block focus-visible:outline-none">
+        <Heading
+          style={{ viewTransitionName: toTransitionName(id) }}
+          class="text-foreground group-hover:text-accent text-lg leading-snug font-bold tracking-tight transition-colors sm:text-xl"
+        >
+          {title}
+        </Heading>
+      </a>
+
+      <!-- Excerpt -->
+      <p class="text-muted-foreground mt-2.5 line-clamp-2 text-sm leading-relaxed sm:text-[15px]">
+        {description}
+      </p>
+    </div>
+
+    <!-- Bottom Tags & Read More -->
+    <div class="border-border/60 mt-4 flex items-center justify-between border-t pt-3.5">
+      <div class="flex flex-wrap gap-1.5">
+        {
+          tags.slice(0, 4).map(tag => (
+            <a
+              href={getRelativeLocaleUrl(locale, `tags/${slugifyStr(tag)}/`)}
+              class="bg-muted/70 text-muted-foreground hover:bg-accent/10 hover:text-accent rounded-md px-2 py-0.5 font-mono text-xs transition-colors"
+            >
+              #{tag}
+            </a>
+          ))
+        }
+      </div>
+      <a
+        href={postUrl}
+        class="text-muted-foreground group-hover:text-accent inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap transition-colors"
+      >
+        阅读全文
+        <span class="transition-transform duration-200 group-hover:translate-x-0.5">
+          →
+        </span>
+      </a>
+    </div>
+  </article>
+</li>

@@ -1,0 +1,154 @@
+@plugin "@tailwindcss/typography";
+
+@layer base {
+  /* ===== Modern Geek Editorial Chinese Typography ===== */
+  .app-prose {
+    @apply prose max-w-none text-[16.5px] leading-[1.85] tracking-[0.01em];
+
+    h1,
+    h2,
+    h3,
+    h4,
+    th {
+      @apply text-foreground font-bold tracking-tight scroll-mt-24;
+    }
+
+    h2 {
+      @apply border-accent mt-12 mb-5 flex items-center border-l-4 pl-3.5 text-xl sm:text-2xl leading-snug;
+    }
+
+    h3 {
+      @apply mt-8 mb-3.5 text-lg sm:text-xl font-semibold not-italic;
+    }
+
+    h4 {
+      @apply mt-6 mb-2.5 text-base font-semibold;
+    }
+
+    p {
+      @apply text-foreground/90 my-4 leading-[1.85];
+    }
+
+    strong {
+      @apply text-foreground font-semibold;
+    }
+
+    ol,
+    ul,
+    figcaption,
+    table {
+      @apply text-foreground/90;
+    }
+
+    a {
+      @apply text-accent hover:text-accent/80 font-medium wrap-break-word underline decoration-accent/40 underline-offset-4 transition-colors hover:decoration-accent;
+    }
+
+    ul {
+      @apply my-4 overflow-x-clip;
+    }
+
+    li {
+      @apply marker:text-accent my-1.5 leading-[1.8];
+    }
+
+    hr {
+      @apply border-border my-10;
+    }
+
+    img {
+      @apply border-border my-6 mx-auto rounded-xl border shadow-sm;
+    }
+
+    img[role="button"] {
+      @apply cursor-zoom-in transition-transform duration-200 hover:scale-[1.01];
+    }
+
+    figcaption {
+      @apply text-muted-foreground mt-2 text-center text-sm;
+    }
+
+    table {
+      @apply border-border my-6 w-full overflow-hidden rounded-xl border text-sm;
+
+      thead {
+        @apply bg-muted/70;
+      }
+
+      th,
+      td {
+        @apply border-border border px-3.5 py-2.5;
+      }
+
+      th {
+        @apply font-semibold;
+      }
+
+      tbody tr:hover {
+        @apply bg-muted/40;
+      }
+    }
+
+    /* Inline code */
+    :not(pre) > code {
+      @apply bg-muted text-foreground border-border/80 rounded-md border px-1.5 py-0.5 font-mono text-[0.875em] font-medium wrap-break-word before:content-none after:content-none;
+    }
+
+    .astro-code code {
+      @apply flex-[1_0_100%] border-none bg-inherit p-0 font-mono text-[13.5px] leading-[1.7];
+    }
+
+    blockquote {
+      @apply border-s-accent bg-muted/50 text-foreground/90 my-6 rounded-r-xl border-s-4 py-3 pr-4 pl-5 not-italic wrap-break-word;
+    }
+
+    blockquote p {
+      @apply my-1.5;
+    }
+
+    details:not(.callout) {
+      @apply text-foreground bg-surface border-border my-4 rounded-xl border p-4 cursor-pointer select-none [&_ul]:my-2!;
+    }
+  }
+
+  /* ===== macOS Style Code Blocks & Syntax Highlighting ===== */
+  .code-window {
+    @apply border-border bg-surface my-6 overflow-hidden rounded-xl border shadow-xs;
+  }
+
+  .code-window-header {
+    @apply border-border bg-muted/60 flex items-center justify-between border-b px-4 py-2 text-xs;
+  }
+
+  .code-window-dots {
+    @apply flex items-center gap-1.5;
+  }
+
+  .code-window-dot {
+    @apply size-2.5 rounded-full;
+  }
+
+  .astro-code {
+    @apply m-0! rounded-none! border-0! bg-(--shiki-light-bg) px-4 py-4 font-mono text-(--shiki-light) [&_span]:text-(--shiki-light);
+  }
+
+  html[data-theme="dark"] .astro-code {
+    @apply bg-(--shiki-dark-bg) text-(--shiki-dark) [&_span]:text-(--shiki-dark);
+  }
+
+  /* Styles for Shiki transformers */
+  .astro-code {
+    .line.diff.add {
+      @apply relative inline-block w-full bg-green-400/20 before:absolute before:-left-3 before:text-green-500 before:content-['+'];
+    }
+    .line.diff.remove {
+      @apply relative inline-block w-full bg-red-500/20 before:absolute before:-left-3 before:text-red-500 before:content-['-'];
+    }
+    .line.highlighted {
+      @apply inline-block w-full bg-slate-400/20;
+    }
+    .highlighted-word {
+      @apply border-border rounded-sm border px-0.5 py-px;
+    }
+  }
+}

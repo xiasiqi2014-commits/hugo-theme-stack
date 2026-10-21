@@ -1,0 +1,42 @@
+/* Register design tokens for Tailwind v4 */
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --font-app:
+    "Inter", -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --font-mono:
+    var(--font-google-sans-code), "JetBrains Mono", "Fira Code",
+    "SFMono-Regular", Consolas, monospace;
+}
+
+/* Light theme values - Crisp Modern Editorial */
+:root,
+[data-theme="light"] {
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --foreground: #0f172a;
+  --accent: #2563eb;
+  --accent-foreground: #ffffff;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --border: #e2e8f0;
+}
+
+/* Dark theme values - Deep Linear / Vercel Slate */
+[data-theme="dark"] {
+  --background: #090d16;
+  --surface: #111827;
+  --foreground: #f1f5f9;
+  --accent: #38bdf8;
+  --accent-foreground: #090d16;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --border: #1e293b;
+}

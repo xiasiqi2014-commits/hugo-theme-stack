@@ -1,0 +1,536 @@
+---
+import { type CollectionEntry, getCollection, render } from "astro:content";
+import PostLayout from "@/layouts/PostLayout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import Datetime from "@/components/Datetime.astro";
+import Tag from "@/components/Tag.astro";
+import { getPostSlug, getPostUrl } from "@/utils/getPostPaths";
+import { getSortedPosts } from "@/utils/getSortedPosts";
+import { slugifyStr } from "@/utils/slugify";
+import { toTransitionName } from "@/utils/toTransitionName";
+import EditPost from "./_components/EditPost.astro";
+import ShareLinks from "./_components/ShareLinks.astro";
+import BackButton from "./_components/BackButton.astro";
+import BackToTopButton from "./_components/BackToTopButton.astro";
+import AdjacentPostNav from "./_components/AdjacentPostNav.astro";
+import config from "@/config";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("posts");
+  const sortedPosts = getSortedPosts(posts);
+
+  return sortedPosts.map((post, index) => ({
+    params: { slug: getPostSlug(post.id, post.filePath) },
+    props: {
+      post,
+      prevPost:
+        index < sortedPosts.length - 1
+          ? {
+              id: sortedPosts[index + 1].id,
+              title: sortedPosts[index + 1].data.title,
+              filePath: sortedPosts[index + 1].filePath,
+            }
+          : null,
+      nextPost:
+        index > 0
+          ? {
+              id: sortedPosts[index - 1].id,
+              title: sortedPosts[index - 1].data.title,
+              filePath: sortedPosts[index - 1].filePath,
+            }
+          : null,
+    },
+  }));
+}
+
+type AdjacentPost = {
+  id: string;
+  title: string;
+  filePath: string | undefined;
+} | null;
+
+type Props = {
+  post: CollectionEntry<"posts">;
+  prevPost: AdjacentPost;
+  nextPost: AdjacentPost;
+};
+
+const { post, prevPost, nextPost } = Astro.props;
+const locale = Astro.currentLocale ?? config.site.lang;
+
+const {
+  title,
+  description,
+  ogImage: initOgImage,
+  canonicalURL,
+  pubDatetime,
+  modDatetime,
+  timezone,
+  tags = [],
+  categories = [],
+  hideEditPost,
+} = post.data;
+
+const { Content, headings } = await render(post);
+const tocHeadings = headings.filter(h => h.depth === 2 || h.depth === 3);
+
+const category = categories[0] ?? tags[0] ?? "技术专栏";
+const charCount = post.body ? post.body.replace(/\s+/g, "").length : 0;
+const readingMinutes = Math.max(1, Math.round(charCount / 400));
+
+let ogImageUrl: string | undefined;
+
+if (typeof initOgImage === "string") {
+  ogImageUrl = initOgImage;
+} else if (initOgImage?.src) {
+  ogImageUrl = initOgImage.src;
+}
+
+if (!ogImageUrl && config.features.dynamicOgImage) {
+  const postUrl = getPostUrl(post.id, post.filePath, locale).replace(
+    /\/+$/,
+    ""
+  );
+  ogImageUrl = `${postUrl}/index.png`;
+}
+
+const ogImage = ogImageUrl
+  ? new URL(ogImageUrl, Astro.url.origin).href
+  : undefined;
+---
+
+<PostLayout
+  title={`${title} | ${config.site.title}`}
+  description={description}
+  ogImage={ogImage}
+  canonicalURL={canonicalURL}
+  pubDatetime={pubDatetime}
+  modDatetime={modDatetime}
+>
+  <Header />
+
+  <BackButton />
+
+  <main
+    id="main-content"
+    class:list={["app-layout pb-12", { "mt-6": !config.features.showBackButton }]}
+    data-pagefind-body
+  >
+    <!-- Article Hero Banner -->
+    <div
+      class="border-border bg-surface mb-8 rounded-3xl border p-6 shadow-2xs sm:p-8"
+    >
+      <div class="mb-4 flex flex-wrap items-center gap-3 text-xs">
+        <span
+          class="bg-accent/10 text-accent rounded-lg px-2.5 py-1 font-medium"
+        >
+          {category}
+        </span>
+        <div class="text-muted-foreground flex items-center gap-2 font-mono">
+          <Datetime {pubDatetime} {modDatetime} {timezone} size="sm" />
+          {
+            charCount > 0 && (
+              <>
+                <span>·</span>
+                <span>{charCount} 字</span>
+                <span>·</span>
+                <span>约 {readingMinutes} 分钟阅读</span>
+              </>
+            )
+          }
+        </div>
+        <EditPost {hideEditPost} {post} class="max-sm:hidden" />
+      </div>
+
+      <h1
+        style={{ viewTransitionName: toTransitionName(post.id) }}
+        class="text-foreground text-2xl leading-tight font-bold tracking-tight sm:text-3xl md:text-4xl"
+      >
+        {title}
+      </h1>
+
+      {
+        description && (
+          <p class="border-border/80 bg-muted/50 text-muted-foreground mt-4 rounded-xl border p-3.5 text-sm leading-relaxed sm:text-[15px]">
+            <span class="text-foreground mr-1.5 font-semibold">导读：</span>
+            {description}
+          </p>
+        )
+      }
+
+      {
+        tags.length > 0 && (
+          <ul class="mt-4 flex flex-wrap gap-2">
+            {tags.map(tag => (
+              <Tag tag={slugifyStr(tag)} tagName={tag} size="sm" />
+            ))}
+          </ul>
+        )
+      }
+    </div>
+
+    <!-- Two-Column Layout: Main Article + Sticky Right TOC -->
+    <div class="flex flex-col gap-8 lg:flex-row lg:items-start">
+      <!-- Main Article Content -->
+      <div class="min-w-0 flex-1">
+        <article
+          id="article"
+          class:list={[
+            "border-border bg-surface w-full rounded-3xl border p-6 shadow-2xs sm:p-10",
+            "app-prose",
+            "prose-pre:bg-(--shiki-light-bg) dark:prose-pre:bg-(--shiki-dark-bg)",
+          ]}
+        >
+          <Content />
+        </article>
+
+        <!-- Post Footer Actions -->
+        <div
+          class="border-border bg-surface mt-6 rounded-2xl border p-5 shadow-2xs sm:p-6"
+        >
+          <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <ul class="flex flex-wrap gap-2">
+              {
+                tags.map(tag => (
+                  <Tag tag={slugifyStr(tag)} tagName={tag} size="sm" />
+                ))
+              }
+            </ul>
+            <BackToTopButton />
+          </div>
+
+          <hr class="border-border my-5" />
+
+          <ShareLinks />
+        </div>
+
+        <div class="mt-6">
+          <AdjacentPostNav {prevPost} {nextPost} />
+        </div>
+      </div>
+
+      <!-- Right Sticky Table of Contents Sidebar -->
+      {
+        tocHeadings.length > 0 && (
+          <aside class="hidden w-64 shrink-0 lg:block lg:sticky lg:top-20">
+            <div class="border-border bg-surface rounded-2xl border p-4 shadow-2xs">
+              <div class="border-border mb-3 flex items-center justify-between border-b pb-2.5">
+                <span class="text-foreground flex items-center gap-1.5 text-sm font-bold">
+                  <span class="bg-accent inline-block size-2 rounded-full" />
+                  文章目录
+                </span>
+                <span
+                  id="toc-progress-text"
+                  class="text-muted-foreground font-mono text-xs"
+                >
+                  0%
+                </span>
+              </div>
+
+              <nav
+                id="toc-nav"
+                aria-label="文章目录"
+                class="max-h-[calc(100vh-14rem)] space-y-1 overflow-y-auto pr-1 text-xs"
+              >
+                {tocHeadings.map(heading => (
+                  <a
+                    href={`#${heading.slug}`}
+                    data-toc-link={heading.slug}
+                    class:list={[
+                      "toc-item text-muted-foreground hover:text-accent block truncate rounded-lg px-2.5 py-1.5 leading-snug transition-all",
+                      heading.depth === 3 ? "pl-5 text-[11.5px]" : "font-medium",
+                    ]}
+                    title={heading.text}
+                  >
+                    {heading.text}
+                  </a>
+                ))}
+              </nav>
+
+              <div class="border-border mt-3 border-t pt-2.5">
+                <button
+                  type="button"
+                  id="sidebar-top-btn"
+                  class="text-muted-foreground hover:text-accent flex w-full items-center justify-center gap-1 rounded-lg py-1 text-xs font-medium transition-colors"
+                >
+                  ↑ 回到顶部
+                </button>
+              </div>
+            </div>
+          </aside>
+        )
+      }
+    </div>
+  </main>
+  <Footer />
+</PostLayout>
+
+<script is:inline data-astro-rerun>
+  function createProgressBar() {
+    const existing = document.getElementById("myBar")?.parentElement;
+    if (existing) existing.remove();
+
+    const progressContainer = document.createElement("div");
+    progressContainer.className =
+      "progress-container fixed top-0 z-50 h-0.5 w-full bg-transparent";
+
+    const progressBar = document.createElement("div");
+    progressBar.className = "progress-bar h-0.5 w-0 bg-accent transition-all duration-75";
+    progressBar.id = "myBar";
+
+    progressContainer.appendChild(progressBar);
+    document.body.appendChild(progressContainer);
+  }
+  createProgressBar();
+
+  function updateScrollProgress() {
+    const onScroll = () => {
+      const winScroll =
+        document.body.scrollTop || document.documentElement.scrollTop;
+      const height =
+        document.documentElement.scrollHeight -
+        document.documentElement.clientHeight;
+      const scrolled = height > 0 ? Math.min(100, Math.max(0, Math.round((winScroll / height) * 100))) : 0;
+      const myBar = document.getElementById("myBar");
+      if (myBar) {
+        myBar.style.width = scrolled + "%";
+      }
+      const tocText = document.getElementById("toc-progress-text");
+      if (tocText) {
+        tocText.textContent = scrolled + "%";
+      }
+    };
+    document.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+  }
+  updateScrollProgress();
+
+  function initScrollSpy() {
+    const tocLinks = Array.from(document.querySelectorAll("[data-toc-link]"));
+    if (tocLinks.length === 0) return;
+
+    const headingElements = tocLinks
+      .map(link => {
+        const slug = link.getAttribute("data-toc-link");
+        return slug ? document.getElementById(slug) : null;
+      })
+      .filter(Boolean);
+
+    function updateActiveToc() {
+      const scrollY = window.scrollY + 120;
+      let currentId = headingElements[0]?.id;
+
+      for (const el of headingElements) {
+        if (el && el.offsetTop <= scrollY) {
+          currentId = el.id;
+        }
+      }
+
+      tocLinks.forEach(link => {
+        const isActive = link.getAttribute("data-toc-link") === currentId;
+        link.classList.toggle("bg-accent/10", isActive);
+        link.classList.toggle("text-accent", isActive);
+        link.classList.toggle("font-semibold", isActive);
+        link.classList.toggle("text-muted-foreground", !isActive);
+      });
+    }
+
+    document.addEventListener("scroll", updateActiveToc, { passive: true });
+    updateActiveToc();
+
+    const topBtn = document.getElementById("sidebar-top-btn");
+    topBtn?.addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }
+  initScrollSpy();
+
+  function addHeadingLinks() {
+    const headings = Array.from(
+      document.querySelectorAll("#article h2, #article h3, #article h4")
+    );
+    for (const heading of headings) {
+      if (heading.querySelector(".heading-link")) continue;
+      heading.classList.add("group");
+      const link = document.createElement("a");
+      link.className =
+        "heading-link ms-2 no-underline opacity-0 group-hover:opacity-100 text-accent text-sm font-mono transition-opacity";
+      link.href = "#" + heading.id;
+
+      const span = document.createElement("span");
+      span.ariaHidden = "true";
+      span.innerText = "#";
+      link.appendChild(span);
+      heading.appendChild(link);
+    }
+  }
+  addHeadingLinks();
+
+  function attachMacCodeWindows() {
+    const codeBlocks = Array.from(document.querySelectorAll("#article pre"));
+
+    for (const codeBlock of codeBlocks) {
+      if (codeBlock.getAttribute("data-language") === "mermaid") continue;
+      if (codeBlock.closest(".code-window")) continue;
+
+      const lang =
+        codeBlock.getAttribute("data-language") ||
+        "text";
+
+      const windowWrapper = document.createElement("div");
+      windowWrapper.className = "code-window";
+
+      const header = document.createElement("div");
+      header.className = "code-window-header";
+
+      const left = document.createElement("div");
+      left.className = "flex items-center gap-3";
+
+      const dots = document.createElement("div");
+      dots.className = "code-window-dots";
+      dots.innerHTML =
+        '<span class="code-window-dot bg-red-400/80"></span>' +
+        '<span class="code-window-dot bg-amber-400/80"></span>' +
+        '<span class="code-window-dot bg-emerald-400/80"></span>';
+
+      const langLabel = document.createElement("span");
+      langLabel.className = "font-mono text-[11px] uppercase tracking-wider text-muted-foreground";
+      langLabel.textContent = lang;
+
+      left.append(dots, langLabel);
+
+      const copyButton = document.createElement("button");
+      copyButton.type = "button";
+      copyButton.className =
+        "copy-code rounded-md bg-background/80 hover:bg-accent/10 hover:text-accent border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors";
+      copyButton.textContent = "复制代码";
+
+      header.append(left, copyButton);
+
+      codeBlock.setAttribute("tabindex", "0");
+      codeBlock.parentNode?.insertBefore(windowWrapper, codeBlock);
+      windowWrapper.append(header, codeBlock);
+
+      copyButton.addEventListener("click", async () => {
+        const code = codeBlock.querySelector("code");
+        const text = code?.innerText ?? "";
+        await navigator.clipboard.writeText(text);
+        copyButton.textContent = "✓ 已复制";
+        setTimeout(() => {
+          copyButton.textContent = "复制代码";
+        }, 1200);
+      });
+    }
+  }
+  attachMacCodeWindows();
+
+  async function renderMermaidDiagrams() {
+    const mermaidBlocks = Array.from(
+      document.querySelectorAll('pre[data-language="mermaid"]')
+    );
+    if (mermaidBlocks.length === 0) return;
+
+    const { default: mermaid } = await import(
+      "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs"
+    );
+    const isDark =
+      document.documentElement.getAttribute("data-theme") === "dark";
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: isDark ? "dark" : "default",
+    });
+
+    for (const pre of mermaidBlocks) {
+      const code = pre.textContent || "";
+      const container = document.createElement("div");
+      container.className =
+        "mermaid my-6 flex justify-center overflow-x-auto rounded-2xl border border-border bg-background/50 p-5";
+      container.textContent = code;
+      pre.replaceWith(container);
+    }
+    await mermaid.run({ querySelector: ".mermaid" });
+  }
+  renderMermaidDiagrams();
+
+  /** Accessible image lightbox for article images. */
+  function initLightbox() {
+    const article = document.getElementById("article");
+    if (!article) return;
+
+    let overlay = null;
+    let lastFocused = null;
+
+    requestAnimationFrame(() => {
+      const images = Array.from(article.querySelectorAll("img"));
+      for (const image of images) {
+        if (image.closest("a")) continue;
+        image.setAttribute("role", "button");
+        image.setAttribute("tabindex", "0");
+      }
+    });
+
+    function open(src, alt, trigger) {
+      if (overlay) return;
+      lastFocused = trigger ?? document.activeElement;
+
+      overlay = document.createElement("div");
+      overlay.setAttribute("role", "dialog");
+      overlay.setAttribute("aria-modal", "true");
+      overlay.className =
+        "fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-black/75 backdrop-blur-xs opacity-0 transition-opacity duration-200";
+
+      const closeButton = document.createElement("button");
+      closeButton.type = "button";
+      closeButton.className =
+        "absolute end-4 top-4 rounded-lg p-2 text-2xl leading-none text-white hover:bg-white/10";
+      closeButton.innerHTML = "&#10005;";
+      closeButton.addEventListener("click", close);
+
+      const image = document.createElement("img");
+      image.src = src;
+      image.alt = alt || "";
+      image.className =
+        "max-h-[90dvh] max-w-[90dvw] cursor-default rounded-xl object-contain shadow-2xl";
+
+      overlay.append(closeButton, image);
+      overlay.addEventListener("click", e => {
+        if (e.target === overlay) close();
+      });
+
+      document.body.appendChild(overlay);
+      document.body.style.overflow = "hidden";
+      document.addEventListener("keydown", onKeyDown);
+
+      requestAnimationFrame(() => overlay?.classList.add("opacity-100"));
+      closeButton.focus();
+    }
+
+    function close() {
+      if (!overlay) return;
+      const el = overlay;
+      overlay = null;
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = "";
+      lastFocused?.focus();
+      lastFocused = null;
+      el.remove();
+    }
+
+    function onKeyDown(e) {
+      if (e.key === "Escape") close();
+    }
+
+    article.addEventListener("click", e => {
+      const image = e.target.closest("img");
+      if (!image || !article.contains(image) || image.closest("a")) return;
+      e.preventDefault();
+      open(image.currentSrc || image.src, image.alt, image);
+    });
+  }
+  initLightbox();
+
+  document.addEventListener("astro:after-swap", () =>
+    window.scrollTo({ left: 0, top: 0, behavior: "instant" })
+  );
+</script>

@@ -1,0 +1,324 @@
+---
+import { getCollection } from "astro:content";
+import { getRelativeLocaleUrl } from "astro:i18n";
+import IconRss from "@/assets/icons/IconRss.svg";
+import IconArrowRight from "@/assets/icons/IconArrowRight.svg";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import Socials from "@/components/Socials.astro";
+import Card from "@/components/Card.astro";
+import LinkButton from "@/components/LinkButton.astro";
+import { getSortedPosts } from "@/utils/getSortedPosts";
+import { getUniqueTags } from "@/utils/getUniqueTags";
+import config from "@/config";
+
+const { socials } = config;
+
+const locale = Astro.currentLocale ?? config.site.lang;
+
+const posts = await getCollection("posts");
+const sortedPosts = getSortedPosts(posts);
+const uniqueTags = getUniqueTags(posts);
+const homePath = getRelativeLocaleUrl(locale, "");
+
+// Build category counts
+const categoryCounts = new Map<string, number>();
+for (const post of sortedPosts) {
+  const cat = post.data.categories?.[0] ?? post.data.tags?.[0] ?? "技术笔记";
+  categoryCounts.set(cat, (categoryCounts.get(cat) ?? 0) + 1);
+}
+const categories = Array.from(categoryCounts.entries());
+
+const featuredSeries = [
+  {
+    badge: "4 篇完结连载",
+    title: "TLS 证书硬核四部曲",
+    desc: "从 SAN/SNI 身份锚定、根证书信任链传递、OCSP Stapling 吊销博弈，到 CT 证书透明度底层机制。",
+    accentClass: "from-blue-500/10 to-indigo-500/5 border-blue-500/20",
+    links: [
+      { label: "（一）身份的锚定：SAN 与 SNI", href: "/posts/tls-certificate-series-1-identity" },
+      { label: "（二）信任的传递：证书链与交叉签名", href: "/posts/tls-certificate-series-2-trust" },
+      { label: "（三）生与死的赛跑：CRL 与 OCSP Stapling", href: "/posts/tls-certificate-series-3-revocation" },
+      { label: "（四）权力的牢笼：证书透明度 (CT)", href: "/posts/tls-certificate-series-4-ct" },
+    ],
+  },
+  {
+    badge: "3 篇实战拆解",
+    title: "TCP 协议栈深度解密",
+    desc: "告别死记硬背，结合 Wireshark 抓包与生产故障排查 SOP，彻底吃透握手、挥手、RST 与 TIME_WAIT。",
+    accentClass: "from-sky-500/10 to-cyan-500/5 border-sky-500/20",
+    links: [
+      { label: "大白话搞懂 TCP 三次握手与四次挥手", href: "/posts/tcp-handshake-wave-explained" },
+      { label: "TCP RST 深度解密：连接异常排查 SOP", href: "/posts/tcp-rst-packet-deep-dive" },
+      { label: "为什么非要有 TIME_WAIT？设计与调优", href: "/posts/tcp-time-wait-design" },
+    ],
+  },
+  {
+    badge: "4 篇架构复盘",
+    title: "Linux 内核与高并发 SRE",
+    desc: "深入生产一线雪崩与丢包事故，打通 CPU 调度、磁盘 I/O、conntrack 连接追踪与 ipset O(1) 架构。",
+    accentClass: "from-emerald-500/10 to-teal-500/5 border-emerald-500/20",
+    links: [
+      { label: "打通 CPU、磁盘 I/O 与网络底层的 SRE 笔记", href: "/posts/sre-cpu-io-network-deep-dive" },
+      { label: "改了 ulimit 还是丢包？深挖 conntrack 两道门", href: "/posts/linux-ulimit-conntrack-high-concurrency" },
+      { label: "从 NLB 域名雪崩看 iptables 与 ipset O(1) 架构", href: "/posts/iptables-ipset-o1-architecture" },
+      { label: "CDN + NLB + MQTT 架构下的真实 IP 排查死局", href: "/posts/real-ip-lost-cdn-nlb-mqtt" },
+    ],
+  },
+];
+---
+
+<Layout>
+  <Header />
+  <main
+    id="main-content"
+    data-layout="index"
+    data-home-path={homePath}
+    class="app-layout py-6 sm:py-10"
+  >
+    <!-- Hero Bento Card -->
+    <section
+      id="hero"
+      class="border-border bg-surface relative overflow-hidden rounded-3xl border p-6 shadow-xs sm:p-8"
+    >
+      <div
+        class="pointer-events-none absolute -top-24 -right-24 size-72 rounded-full bg-blue-500/10 blur-3xl dark:bg-sky-500/10"
+      >
+      </div>
+
+      <div class="relative flex flex-col justify-between gap-6 md:flex-row md:items-center">
+        <div class="max-w-2xl">
+          <div class="flex items-center gap-4">
+            <img
+              src="/avatar.jpg"
+              alt={config.site.author}
+              width="68"
+              height="68"
+              class="border-border size-16 rounded-2xl border object-cover shadow-xs sm:size-18"
+            />
+            <div>
+              <div class="flex items-center gap-2.5">
+                <h1 class="text-foreground text-2xl font-bold tracking-tight sm:text-3xl">
+                  {config.site.title}
+                </h1>
+                <a
+                  target="_blank"
+                  href={`${import.meta.env.BASE_URL.replace(/\/?$/, "/")}rss.xml`}
+                  class="bg-muted text-muted-foreground hover:text-accent inline-flex size-7 items-center justify-center rounded-lg transition-colors"
+                  aria-label="RSS Feed"
+                  title="RSS 订阅"
+                >
+                  <IconRss width={15} height={15} class="stroke-current stroke-2" />
+                </a>
+              </div>
+              <p class="text-muted-foreground mt-1 font-mono text-xs sm:text-sm">
+                @{config.site.author} · SRE / Linux Kernel / Cloud Native
+              </p>
+            </div>
+          </div>
+
+          <p class="text-foreground/90 mt-5 text-sm leading-relaxed sm:text-base">
+            打破黑盒，深入底层。这里记录我在生产环境中的<strong>高并发架构复盘、Linux 内核调优、TCP/TLS 网络协议栈剖析与 Kubernetes 运维实战</strong>。
+          </p>
+
+          <div class="mt-4 flex flex-wrap items-center gap-2">
+            {
+              ["Linux 内核", "TCP/IP 协议栈", "TLS/HTTPS", "Kubernetes", "高并发调优"].map(
+                badge => (
+                  <span class="border-border bg-muted/60 text-muted-foreground rounded-lg border px-2.5 py-1 font-mono text-xs">
+                    {badge}
+                  </span>
+                )
+              )
+            }
+          </div>
+        </div>
+
+        <!-- Stats & Socials Box -->
+        <div class="border-border/80 bg-background/60 flex shrink-0 flex-row items-center justify-between gap-4 rounded-2xl border p-4 sm:gap-6 md:flex-col md:items-end">
+          <div class="flex gap-5 text-center">
+            <div>
+              <div class="text-foreground font-mono text-2xl font-bold">
+                {sortedPosts.length}
+              </div>
+              <div class="text-muted-foreground text-xs">深度长文</div>
+            </div>
+            <div class="border-border border-l pl-5">
+              <div class="text-foreground font-mono text-2xl font-bold">3</div>
+              <div class="text-muted-foreground text-xs">系列专栏</div>
+            </div>
+            <div class="border-border border-l pl-5">
+              <div class="text-foreground font-mono text-2xl font-bold">
+                {uniqueTags.length}
+              </div>
+              <div class="text-muted-foreground text-xs">技术标签</div>
+            </div>
+          </div>
+          {
+            socials.length > 0 && (
+              <div class="flex items-center gap-2">
+                <Socials />
+              </div>
+            )
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- Featured Series / 精选专栏 -->
+    <section id="series" class="mt-10">
+      <div class="mb-4 flex items-center justify-between">
+        <div>
+          <h2 class="text-foreground text-xl font-bold tracking-tight sm:text-2xl">
+            精选系列专栏
+          </h2>
+          <p class="text-muted-foreground mt-0.5 text-xs sm:text-sm">
+            成体系的底层技术连载，建议按顺序阅读
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {
+          featuredSeries.map(series => (
+            <div
+              class:list={[
+                "bg-surface flex flex-col justify-between rounded-2xl border bg-linear-to-br p-5 shadow-2xs transition-all hover:shadow-md",
+                series.accentClass,
+              ]}
+            >
+              <div>
+                <span class="bg-accent/10 text-accent inline-block rounded-md px-2 py-0.5 font-mono text-xs font-medium">
+                  {series.badge}
+                </span>
+                <h3 class="text-foreground mt-2.5 text-lg font-bold tracking-tight">
+                  {series.title}
+                </h3>
+                <p class="text-muted-foreground mt-1.5 text-xs leading-relaxed">
+                  {series.desc}
+                </p>
+              </div>
+
+              <ul class="border-border/60 mt-4 space-y-2 border-t pt-3.5">
+                {series.links.map((item, idx) => (
+                  <li>
+                    <a
+                      href={item.href}
+                      class="text-foreground/85 hover:text-accent group flex items-center gap-2 text-xs font-medium transition-colors"
+                    >
+                      <span class="bg-muted text-muted-foreground group-hover:bg-accent group-hover:text-accent-foreground inline-flex size-4.5 shrink-0 items-center justify-center rounded font-mono text-[10px] transition-colors">
+                        0{idx + 1}
+                      </span>
+                      <span class="truncate">{item.label}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    <!-- All Posts with Interactive Category Filter -->
+    <section id="recent-posts" class="mt-12">
+      <div class="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h2 class="text-foreground text-xl font-bold tracking-tight sm:text-2xl">
+            全部技术文章
+          </h2>
+          <p class="text-muted-foreground mt-0.5 text-xs sm:text-sm">
+            点击右侧分类可快速筛选对应领域的文章
+          </p>
+        </div>
+
+        <!-- Category Filter Pills -->
+        <div
+          id="category-tabs"
+          class="flex flex-wrap items-center gap-1.5"
+          role="tablist"
+          aria-label="文章分类筛选"
+        >
+          <button
+            type="button"
+            data-filter="all"
+            class="cat-tab bg-accent text-accent-foreground rounded-xl px-3 py-1.5 text-xs font-medium transition-all"
+          >
+            全部 ({sortedPosts.length})
+          </button>
+          {
+            categories.map(([cat, count]) => (
+              <button
+                type="button"
+                data-filter={cat}
+                class="cat-tab border-border bg-surface text-muted-foreground hover:border-accent/40 hover:text-foreground rounded-xl border px-3 py-1.5 text-xs font-medium transition-all"
+              >
+                {cat} ({count})
+              </button>
+            ))
+          }
+        </div>
+      </div>
+
+      <ul id="post-list" class="grid grid-cols-1 gap-4">
+        {sortedPosts.map(data => <Card variant="h3" {...data} />)}
+      </ul>
+    </section>
+
+    <div class="mt-10 text-center">
+      <LinkButton
+        href={getRelativeLocaleUrl(locale, "archives")}
+        class="border-border bg-surface text-foreground hover:border-accent hover:text-accent inline-flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-medium shadow-2xs transition-all"
+      >
+        查看时间线归档
+        <IconArrowRight class="inline-block size-4 rtl:-rotate-180" />
+      </LinkButton>
+    </div>
+  </main>
+  <Footer />
+</Layout>
+
+<script>
+  function initHomeInteractions() {
+    const indexLayout = (document.querySelector("#main-content") as HTMLElement)
+      ?.dataset;
+    const baseRoot = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+    if (indexLayout?.layout) {
+      sessionStorage.setItem("backUrl", indexLayout.homePath ?? baseRoot);
+    }
+
+    const tabs = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("#category-tabs .cat-tab")
+    );
+    const cards = Array.from(
+      document.querySelectorAll<HTMLElement>("#post-list .post-card-item")
+    );
+
+    if (tabs.length === 0 || cards.length === 0) return;
+
+    tabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        const filter = tab.dataset.filter ?? "all";
+
+        tabs.forEach(t => {
+          const active = t === tab;
+          t.classList.toggle("bg-accent", active);
+          t.classList.toggle("text-accent-foreground", active);
+          t.classList.toggle("bg-surface", !active);
+          t.classList.toggle("text-muted-foreground", !active);
+          t.classList.toggle("border", !active);
+          t.classList.toggle("border-border", !active);
+        });
+
+        cards.forEach(card => {
+          const cat = card.dataset.category;
+          const show = filter === "all" || cat === filter;
+          card.style.display = show ? "" : "none";
+        });
+      });
+    });
+  }
+
+  document.addEventListener("astro:page-load", initHomeInteractions);
+</script>

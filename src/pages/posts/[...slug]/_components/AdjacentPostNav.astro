@@ -1,0 +1,57 @@
+---
+import IconArrowLeft from "@/assets/icons/IconArrowLeft.svg";
+import IconArrowRight from "@/assets/icons/IconArrowRight.svg";
+import { getPostUrl } from "@/utils/getPostPaths";
+import { useTranslations } from "@/i18n";
+import config from "@/config";
+
+type AdjacentPost = {
+  id: string;
+  title: string;
+  filePath: string | undefined;
+} | null;
+
+type Props = {
+  prevPost: AdjacentPost;
+  nextPost: AdjacentPost;
+};
+
+const { prevPost, nextPost } = Astro.props;
+const locale = Astro.currentLocale ?? config.site.lang;
+const t = useTranslations(locale);
+---
+
+<div data-pagefind-ignore class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+  {
+    prevPost && (
+      <a
+        href={getPostUrl(prevPost.id, prevPost.filePath, locale)}
+        class="group border-border bg-surface hover:border-accent/50 flex w-full items-start gap-3 rounded-2xl border p-4 shadow-2xs transition-all hover:shadow-sm"
+      >
+        <IconArrowLeft class="text-muted-foreground group-hover:text-accent mt-0.5 size-5 shrink-0 transition-transform group-hover:-translate-x-0.5 rtl:rotate-180" />
+        <div class="min-w-0">
+          <span class="text-muted-foreground text-xs">{t.post.previousPost}</span>
+          <div class="text-foreground group-hover:text-accent mt-1 line-clamp-2 text-sm font-semibold transition-colors">
+            {prevPost.title}
+          </div>
+        </div>
+      </a>
+    )
+  }
+  {
+    nextPost && (
+      <a
+        href={getPostUrl(nextPost.id, nextPost.filePath, locale)}
+        class="group border-border bg-surface hover:border-accent/50 flex w-full items-start justify-end gap-3 rounded-2xl border p-4 text-end shadow-2xs transition-all hover:shadow-sm sm:col-start-2"
+      >
+        <div class="min-w-0">
+          <span class="text-muted-foreground text-xs">{t.post.nextPost}</span>
+          <div class="text-foreground group-hover:text-accent mt-1 line-clamp-2 text-sm font-semibold transition-colors">
+            {nextPost.title}
+          </div>
+        </div>
+        <IconArrowRight class="text-muted-foreground group-hover:text-accent mt-0.5 size-5 shrink-0 transition-transform group-hover:translate-x-0.5 rtl:rotate-180" />
+      </a>
+    )
+  }
+</div>
